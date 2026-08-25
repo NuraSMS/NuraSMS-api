@@ -28,6 +28,8 @@ app.use(cookieParser());
 
 // Routes
 app.use("/", require("./routes/auth/AuthRoute"));
+app.use("/fivesim", require("./routes/fivesim/fivesimRoutes"));
+
 
 // Test route
 app.get("/", (req, res) => {

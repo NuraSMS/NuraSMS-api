@@ -1,4 +1,25 @@
-const fivesimService = require("../../services/fivesim/fivesimService");
+const fivesimService = require("../../services/fivesimService");
+const debitWallet = require("../../services/wallet/debitWallet");
+const creditWallet = require("../../services/wallet/creditWallet");
+
+const getUserProfile = async (req, res) => {
+  try {
+    const profile = await fivesimService.getUserProfile();
+
+    return res.status(200).json({
+      profile,
+    });
+  } catch (error) {
+    console.error(
+      "Get user profile error:",
+      error.response?.data || error.message
+    );
+
+    return res.status(500).json({
+      message: "Unable to retrieve user profile",
+    });
+  }
+};
 
 const getCountries = async (req, res) => {
   try {
@@ -64,16 +85,98 @@ const buyActivationNumber = async (req, res) => {
       });
     }
 
-    const order = await fivesimService.buyActivationNumber(
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Get 5sim prices
+    const products = await fivesimService.getProducts(
       country,
-      product,
       operator
     );
 
-    return res.status(200).json({
-      message: "Activation number purchased successfully",
-      order,
-    });
+    const productData = products[product];
+
+    if (!productData) {
+      return res.status(404).json({
+        message: "Product is not available",
+      });
+    }
+
+    // 5sim's actual price
+    const fiveSimPrice = Number(productData.cost);
+
+    if (!fiveSimPrice || fiveSimPrice <= 0) {
+      return res.status(400).json({
+        message: "Invalid product price",
+      });
+    }
+
+    // Calculate your markup
+    const markupPercent = Number(
+      process.env.NURASMS_MARKUP_PERCENT || 0
+    );
+
+    const markup = fiveSimPrice * (markupPercent / 100);
+
+    // Final amount charged to customer
+    const customerPrice = fiveSimPrice + markup;
+
+    const reference = `5SIM-ACT-${userId}-${Date.now()}`;
+
+    // Debit customer price
+    await debitWallet(
+      userId,
+      customerPrice,
+      reference,
+      {
+        service: "5sim_activation",
+        country,
+        product,
+        operator,
+        fiveSimPrice,
+        markup,
+        markupPercent,
+      }
+    );
+
+    try {
+      const order =
+        await fivesimService.buyActivationNumber(
+          country,
+          product,
+          operator
+        );
+
+      return res.status(200).json({
+        message: "Activation number purchased successfully",
+        order,
+        amount: customerPrice,
+      });
+    } catch (error) {
+      // Refund the FULL amount charged to the customer
+      await creditWallet(
+        userId,
+        customerPrice,
+        `${reference}-REFUND`,
+        {
+          service: "5sim_activation_refund",
+          originalReference: reference,
+          country,
+          product,
+          operator,
+          fiveSimPrice,
+          markup,
+          markupPercent,
+        }
+      );
+
+      throw error;
+    }
   } catch (error) {
     console.error(
       "Buy activation number error:",
@@ -81,7 +184,9 @@ const buyActivationNumber = async (req, res) => {
     );
 
     return res.status(500).json({
-      message: "Unable to purchase activation number",
+      message:
+        error.message ||
+        "Unable to purchase activation number",
     });
   }
 };
@@ -280,6 +385,7 @@ const getBalance = async (req, res) => {
 };
 
 module.exports = {
+  getUserProfile,
   getCountries,
   getProducts,
   buyActivationNumber,

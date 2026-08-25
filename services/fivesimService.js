@@ -1,4 +1,12 @@
 const client = require("../config/fivesim");
+require("dotenv").config();
+
+// admin - change later to only allow admin users to access this service
+async function getUserProfile() {
+  const response = await client.get("/user/profile");
+
+  return response.data; 
+}
 
 async function getCountries() {
   const response = await client.get("/guest/countries");
@@ -11,7 +19,34 @@ async function getProducts(country, operator = "any") {
     `/guest/products/${country}/${operator}`
   );
 
-  return response.data;
+  const exchangeRate = Number(
+    process.env.NURASMS_USD_NGN_RATE
+  );
+
+  const markupPercent = Number(
+    process.env.NURASMS_MARKUP_PERCENT || 20
+  );
+
+  if (!exchangeRate || exchangeRate <= 0) {
+    throw new Error("Invalid USD to NGN exchange rate");
+  }
+
+  const products = response.data;
+
+  for (const product of Object.values(products)) {
+    const priceUSD = Number(product.Price);
+
+    const priceNGN = priceUSD * exchangeRate;
+
+    const markup = priceNGN * (markupPercent / 100);
+
+    const customerPrice = priceNGN + markup;
+
+    product.cost = Math.ceil(customerPrice);
+    product.currency = "NGN";
+  }
+
+  return products;
 }
 
 async function buyActivationNumber(
@@ -84,7 +119,16 @@ async function getBalance() {
   return response.data;
 }
 
+async function checkOrder(orderId) {
+  const response = await fivesimApi.get(`/user/check/${orderId}`);
+
+  return response.data;
+}
+
+
+
 module.exports = {
+  getUserProfile,
   getCountries,
   getProducts,
   buyActivationNumber,

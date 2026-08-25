@@ -1,21 +1,12 @@
-const { default: axios } = require("axios");
-const fivesimBaseUrl = "https://5sim.net/v1";
-
+const axios = require("axios");
 
 const fivesimApi = axios.create({
-  baseURL: `${fivesimBaseUrl}`,
+  baseURL: "https://5sim.net/v1",
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: `Bearer ${process.env.FIVESIM_API_TOKEN}`,
   },
-});
-
-fivesimApi.interceptors.request.use((config) => {
-  config.data = {
-    ...config.data,
-    key: process.env.FIVESIM_API_TOKEN,
-  };
-
-  return config;
 });
 
 module.exports = fivesimApi;

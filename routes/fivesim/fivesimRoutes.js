@@ -15,7 +15,10 @@ const {
   banOrder,
   getSmsInbox,
   getBalance,
+  getUserProfile,
 } = require("../../controllers/fivesim/fivesimController");
+
+router.get("/profile", getUserProfile);
 
 router.get("/countries", getCountries);
 
