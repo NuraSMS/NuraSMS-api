@@ -9,7 +9,7 @@ const genVirtualAccount = async (user) => {
         email: user.email,
         first_name: user.firstName,
         last_name: user.lastName,
-        phone: user.phoneNumber,
+        phone: user.phoneNumber || "0800000000",
         preferred_bank: "titan-paystack ", // change to test-bank
         country: "NG",
         metadata: {userId: user._id }
