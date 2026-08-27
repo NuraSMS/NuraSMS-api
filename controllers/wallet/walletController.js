@@ -1,7 +1,7 @@
 const WalletModel = require("../../models/Wallet")
 
 const getWalletBalance = async (req, res) => { 
-    const user = req.user._id
+    const user = req.user.id
     try {
         const balance = await WalletModel.findOne({user})
 
