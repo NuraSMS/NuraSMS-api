@@ -15,7 +15,7 @@ const creditWallet = async ({
   try {
     session.startTransaction();
 
-    const existing = await transactionModel
+    const existing = await TransactionModel
       .findOne({
         reference,
       })
