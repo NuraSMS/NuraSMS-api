@@ -1,3 +1,4 @@
+const UserModel = require("../../models/User");
 const VirtualAccountModel = require("../../models/VirtualAccounts");
 const genVirtualAccount = require("../../services/wallet/genVirtualAccount");
 
