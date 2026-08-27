@@ -30,7 +30,7 @@ const createVirtualAccount = async (req, res) => {
 };
 
 const getVirtualAccount = async (req, res) => {
-  const user = req.user._id
+  const user = req.user.id
 
   // console.log(user)
 
