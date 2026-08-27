@@ -53,7 +53,7 @@ const processPaystackEvent = async (req, res) => {
       const accountNumber = data.authorization.receiver_bank_account_number;
 
       // get the user with the acct
-      const virtualAccount = await virtualAccountModel.findOne({
+      const virtualAccount = await VirtualAccountModel.findOne({
         "dedicatedAccount.account_number": accountNumber,
       });
 
