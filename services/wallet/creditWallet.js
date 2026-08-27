@@ -25,7 +25,7 @@ const creditWallet = async ({
       throw new Error("Duplicate transaction");
     }
 
-    const wallet = await walletModel.findOneAndUpdate(
+    const wallet = await WalletModel.findOneAndUpdate(
       {
         user: userId,
         isFrozen: false,
@@ -42,7 +42,7 @@ const creditWallet = async ({
       },
     );
 
-    await transactionModel.create(
+    await TransactionModel.create(
       [
         {
           user: userId,
