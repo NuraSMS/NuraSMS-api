@@ -8,12 +8,13 @@ const register = async (req, res) => {
       email,
       password,
       firstName,
+      phoneNumber,
       lastName,
     } = req.body;
 
     // Validate required fields
 
-    if (!username || !email || !password || !firstName || !lastName) {
+    if (!username || !email || !password || !firstName || !lastName || !phoneNumber) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -25,6 +26,7 @@ const register = async (req, res) => {
     email = email.trim().toLowerCase();
     firstName = firstName.trim();
     lastName = lastName.trim();
+    phoneNumber = phoneNumber.trim();
 
     // Validate username
 
@@ -66,6 +68,7 @@ const register = async (req, res) => {
       $or: [
         { username },
         { email },
+        { phoneNumber }
       ],
     }).lean();
 
@@ -81,6 +84,11 @@ const register = async (req, res) => {
           message: "Email already exists",
         });
       }
+      if (existingUser.phoneNumber === phoneNumber) {
+        return res.status(409).json({
+          message: "Phone number already exists",
+        });
+      }
     }
 
     // Hash password
@@ -93,6 +101,7 @@ const register = async (req, res) => {
       username,
       email,
       password: hashedPassword,
+      phoneNumber,
       firstName,
       lastName,
     });
