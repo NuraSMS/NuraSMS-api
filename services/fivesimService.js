@@ -52,7 +52,7 @@ async function getProducts(country, operator = "any") {
 async function buyActivationNumber(
   country,
   product,
-  operator = "any"
+  operator = "virtual51"
 ) {
   const response = await client.get(
     `/user/buy/activation/${country}/${operator}/${product}`
@@ -120,7 +120,7 @@ async function getBalance() {
 }
 
 async function checkOrder(orderId) {
-  const response = await fivesimApi.get(`/user/check/${orderId}`);
+  const response = await client.get(`/user/check/${orderId}`);
 
   return response.data;
 }

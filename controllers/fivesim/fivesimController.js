@@ -76,7 +76,7 @@ const buyActivationNumber = async (req, res) => {
     const {
       country,
       product,
-      operator = "any",
+      operator = "virtual51",
     } = req.body;
 
     if (!country || !product) {
@@ -108,39 +108,41 @@ const buyActivationNumber = async (req, res) => {
     }
 
     // 5sim's actual price
-    const fiveSimPrice = Number(productData.cost);
+    const productPrice = Number(productData.cost);
 
-    if (!fiveSimPrice || fiveSimPrice <= 0) {
+    if (!productPrice || productPrice <= 0) {
       return res.status(400).json({
         message: "Invalid product price",
       });
     }
 
     // Calculate your markup
-    const markupPercent = Number(
-      process.env.NURASMS_MARKUP_PERCENT || 0
-    );
+    // const markupPercent = Number(
+    //   process.env.NURASMS_MARKUP_PERCENT || 0
+    // );
 
-    const markup = fiveSimPrice * (markupPercent / 100);
+    // const markup = fiveSimPrice * (markupPercent / 100);
 
     // Final amount charged to customer
-    const customerPrice = fiveSimPrice + markup;
+    // const customerPrice = fiveSimPrice + markup;
+    console.log(`Customer price: ${productPrice}, 5sim price: ${productPrice})`
+    );
 
     const reference = `5SIM-ACT-${userId}-${Date.now()}`;
 
     // Debit customer price
     await debitWallet(
       userId,
-      customerPrice,
-      reference,
+      productPrice,
+      reference, 
       {
         service: "5sim_activation",
         country,
         product,
         operator,
-        fiveSimPrice,
-        markup,
-        markupPercent,
+        productPrice,
+        // markup,
+        // markupPercent,
       }
     );
 
@@ -155,13 +157,13 @@ const buyActivationNumber = async (req, res) => {
       return res.status(200).json({
         message: "Activation number purchased successfully",
         order,
-        amount: customerPrice,
+        amount: productPrice,
       });
     } catch (error) {
       // Refund the FULL amount charged to the customer
       await creditWallet(
         userId,
-        customerPrice,
+        productPrice,
         `${reference}-REFUND`,
         {
           service: "5sim_activation_refund",
@@ -169,9 +171,9 @@ const buyActivationNumber = async (req, res) => {
           country,
           product,
           operator,
-          fiveSimPrice,
-          markup,
-          markupPercent,
+          productPrice,
+          // markup,
+          // markupPercent,
         }
       );
 
