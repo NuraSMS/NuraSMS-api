@@ -29,7 +29,7 @@ app.use(cookieParser());
 
 // Routes
 app.use("/", require("./routes/auth/AuthRoute"));
-app.use("/fivesim", require("./routes/fivesim/fivesimRoutes"));
+app.use("/api", require("./routes/fivesim/fivesimRoutes"));
 app.use("/api", require("./routes/wallet/virtualAccountRoute"));
 app.use("/api", require("./routes/wallet/walletRoute"));
 app.use("/api", require("./routes/wallet/transactionRoute"));
