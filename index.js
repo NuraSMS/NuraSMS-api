@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Routes
-app.use("/", require("./routes/auth/AuthRoute"));
+app.use("/api", require("./routes/auth/AuthRoute"));
 app.use("/api", require("./routes/fivesim/fivesimRoutes"));
 app.use("/api", require("./routes/wallet/virtualAccountRoute"));
 app.use("/api", require("./routes/wallet/walletRoute"));
