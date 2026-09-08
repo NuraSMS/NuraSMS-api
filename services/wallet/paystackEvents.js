@@ -1,78 +1,120 @@
 const crypto = require("crypto");
 const VirtualAccountModel = require("../../models/VirtualAccounts");
 const TransactionModel = require("../../models/Transactions");
-const WalletModel = require("../../models/Wallet");
+const UserModel = require("../../models/User"); // Change this path/name if needed
 const creditWallet = require("./creditWallet");
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
 const processPaystackEvent = async (req, res) => {
-  const hash = req.headers["x-paystack-signature"];
+  const signature = req.headers["x-paystack-signature"];
   const payload = JSON.stringify(req.body);
-  // const payload = req.body.toString();
 
-  // Verify signature came from Paystack
   const computedHash = crypto
     .createHmac("sha512", PAYSTACK_SECRET)
     .update(payload)
     .digest("hex");
 
-  console.log(hash, computedHash);
+  const isValidSignature =
+    signature &&
+    signature.length === computedHash.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(computedHash)
+    );
 
-  if (hash !== computedHash) {
-    console.log("invalid signature");
+  if (!isValidSignature) {
+    console.log("Invalid Paystack webhook signature");
     return res.status(400).send("Invalid signature");
   }
 
   const event = req.body;
 
-  // Handle dedicated account creation success
+  // Dedicated virtual account successfully created
   if (event.event === "dedicatedaccount.assign.success") {
     console.log("DVA created:", event.data);
+
     const data = event.data;
+
     try {
-      await VirtualAccountModel.create({
-        user: event.data.customer.metadata.userId,
-        customer: data.customer,
-        dedicatedAccount: data.dedicated_account,
-      });
+      const email = data.customer?.email?.trim().toLowerCase();
+      const accountNumber = data.dedicated_account?.account_number;
+
+      if (!email || !accountNumber) {
+        console.error("DVA webhook is missing customer email or account number", {
+          email,
+          accountNumber,
+        });
+
+        return res.sendStatus(200);
+      }
+
+      // Find the app user using the same email sent to Paystack
+      const user = await UserModel.findOne({ email }).select("_id");
+
+      if (!user) {
+        console.error("No user found for Paystack DVA webhook", { email });
+
+        return res.sendStatus(200);
+      }
+
+      // Upsert prevents duplicate DVA records if Paystack retries the webhook
+      await VirtualAccountModel.findOneAndUpdate(
+        {
+          "dedicatedAccount.account_number": accountNumber,
+        },
+        {
+          $set: {
+            user: user._id,
+            customer: data.customer,
+            dedicatedAccount: data.dedicated_account,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+        }
+      );
+
       console.log("DVA stored in DB successfully");
     } catch (err) {
       console.error("Error storing DVA in DB:", err);
     }
   }
 
-  // handle wallet funding
+  // Wallet funding
   else if (event.event === "charge.success") {
     console.log("Wallet funded:", event.data);
 
     const data = event.data;
-    console.log(data);
 
     try {
-      const accountNumber = data.authorization.receiver_bank_account_number;
+      const accountNumber =
+        data.authorization?.receiver_bank_account_number;
 
-      // get the user with the acct
+      if (!accountNumber) {
+        console.log("No receiving account number in this charge event");
+        return res.sendStatus(200);
+      }
+
       const virtualAccount = await VirtualAccountModel.findOne({
         "dedicatedAccount.account_number": accountNumber,
       });
 
       if (!virtualAccount) {
-        console.log("Virtual account not found");
+        console.log("Virtual account not found", { accountNumber });
         return res.sendStatus(200);
       }
 
-      // to prevent duplicate transactions
       const existingTx = await TransactionModel.findOne({
         reference: data.reference,
       });
 
       if (existingTx) {
-        console.log("Duplicate transaction");
+        console.log("Duplicate transaction", { reference: data.reference });
         return res.sendStatus(200);
       }
 
-      // credit wallet
       await creditWallet({
         userId: virtualAccount.user,
         amount: data.amount / 100,
@@ -87,18 +129,17 @@ const processPaystackEvent = async (req, res) => {
     }
   }
 
-  // Handle dedicated account creation failure
+  // DVA creation failure
   else if (event.event === "dedicatedaccount.assign.failed") {
-    console.log("DVA creation failed:", event);
-    // Optionally, store failed attempt in DB
+    console.log("DVA creation failed:", event.data);
   }
 
-  // Handle other/unexpected events
+  // Other Paystack events
   else {
-    console.log("Unhandled event:", event.event);
+    console.log("Unhandled Paystack event:", event.event);
   }
 
-  res.sendStatus(200);
+  return res.sendStatus(200);
 };
 
 module.exports = { processPaystackEvent };

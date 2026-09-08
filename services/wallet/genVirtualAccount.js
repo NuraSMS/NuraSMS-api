@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 
 const formatNigerianPhone = (phone) => {
   if (!phone) return null;
@@ -51,7 +51,7 @@ const genVirtualAccount = async (user) => {
     const response = await axios.post(
       "https://api.paystack.co/dedicated_account/assign",
       {
-        email: user.email,
+        email: user.email.trim().toLowerCase(),
         first_name: user.firstName,
         last_name: user.lastName,
         phone,
@@ -66,7 +66,7 @@ const genVirtualAccount = async (user) => {
           Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     console.log("Paystack response:", response.data);
@@ -75,7 +75,7 @@ const genVirtualAccount = async (user) => {
   } catch (err) {
     console.error(
       "Paystack virtual account error:",
-      err.response?.data || err.message
+      err.response?.data || err.message,
     );
 
     throw err;
