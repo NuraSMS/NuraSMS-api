@@ -107,7 +107,6 @@ const buyActivationNumber = async (req, res) => {
       });
     }
 
-    // 5sim's actual price
     const productPrice = Number(productData.cost);
 
     if (!productPrice || productPrice <= 0) {
@@ -161,11 +160,12 @@ const buyActivationNumber = async (req, res) => {
       });
     } catch (error) {
       // Refund the FULL amount charged to the customer
-      await creditWallet(
+      await creditWallet({
         userId,
-        productPrice,
-        `${reference}-REFUND`,
-        {
+        amount: productPrice,
+        reference: `${reference}-REFUND`,
+        source: "SYSTEM",
+        meta: {
           service: "5sim_activation_refund",
           originalReference: reference,
           country,
@@ -174,8 +174,8 @@ const buyActivationNumber = async (req, res) => {
           productPrice,
           // markup,
           // markupPercent,
-        }
-      );
+        },
+      });
 
       throw error;
     }
