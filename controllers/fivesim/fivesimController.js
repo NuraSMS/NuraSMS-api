@@ -1,6 +1,7 @@
 const fivesimService = require("../../services/fivesimService");
 const debitWallet = require("../../services/wallet/debitWallet");
 const creditWallet = require("../../services/wallet/creditWallet");
+const TransactionModel = require("../../models/Transactions");
 
 const getUserProfile = async (req, res) => {
   try {
@@ -153,6 +154,16 @@ const buyActivationNumber = async (req, res) => {
           operator
         );
 
+      await TransactionModel.updateOne(
+        { reference },
+        {
+          $set: {
+            "meta.orderId": String(order.id),
+            "meta.orderStatus": order.status,
+          },
+        }
+      );
+
       return res.status(200).json({
         message: "Activation number purchased successfully",
         order,
@@ -294,11 +305,50 @@ const cancelOrder = async (req, res) => {
       });
     }
 
+    if (!req.user?.id) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const userId = req.user.id;
+
+    const purchaseTransaction = await TransactionModel.findOne({
+      user: userId,
+      type: "debit",
+      "meta.orderId": String(orderId),
+    });
+
+    if (!purchaseTransaction) {
+      return res.status(404).json({
+        message: "No matching purchase found for this order",
+      });
+    }
+
     const order = await fivesimService.cancelOrder(orderId);
 
+    try {
+      await creditWallet({
+        userId,
+        amount: purchaseTransaction.amount,
+        reference: `${purchaseTransaction.reference}-CANCEL-REFUND`,
+        source: "SYSTEM",
+        meta: {
+          service: "5sim_activation_cancel_refund",
+          originalReference: purchaseTransaction.reference,
+          orderId,
+        },
+      });
+    } catch (refundError) {
+      if (refundError.message !== "Duplicate transaction") {
+        throw refundError;
+      }
+    }
+
     return res.status(200).json({
-      message: "Order cancelled successfully",
+      message: "Order cancelled and amount refunded successfully",
       order,
+      amount: purchaseTransaction.amount,
     });
   } catch (error) {
     console.error(
