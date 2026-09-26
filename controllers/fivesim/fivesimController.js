@@ -77,7 +77,7 @@ const buyActivationNumber = async (req, res) => {
     const {
       country,
       product,
-      operator = "virtual51",
+      // operator = "virtual51",
     } = req.body;
 
     if (!country || !product) {
