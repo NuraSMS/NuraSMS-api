@@ -14,7 +14,7 @@ async function getCountries() {
   return response.data;
 }
 
-async function getProducts(country, operator = "any") {
+async function getProducts(country, operator = process.env.FIVESIM_OPERATOR || "any") {
   const response = await client.get(
     `/guest/products/${country}/${operator}`
   );
@@ -52,7 +52,7 @@ async function getProducts(country, operator = "any") {
 async function buyActivationNumber(
   country,
   product,
-  operator = "virtual51"
+  operator = process.env.FIVESIM_OPERATOR || "any"
 ) {
   const response = await client.get(
     `/user/buy/activation/${country}/${operator}/${product}`
@@ -64,7 +64,7 @@ async function buyActivationNumber(
 async function buyHostingNumber(
   country,
   product,
-  operator = "any"
+  operator = process.env.FIVESIM_OPERATOR || "any"
 ) {
   const response = await client.get(
     `/user/buy/hosting/${country}/${operator}/${product}`
