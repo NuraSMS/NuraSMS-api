@@ -23,8 +23,8 @@ async function getProducts(country, operator = process.env.FIVESIM_OPERATOR || "
     process.env.NURASMS_USD_NGN_RATE
   );
 
-  const markupPercent = Number(
-    process.env.NURASMS_MARKUP_PERCENT || 20
+  const markupAmount = Number(
+    process.env.NURASMS_MARKUP_AMOUNT || 1100
   );
 
   if (!exchangeRate || exchangeRate <= 0) {
@@ -38,11 +38,9 @@ async function getProducts(country, operator = process.env.FIVESIM_OPERATOR || "
 
     const priceNGN = priceUSD * exchangeRate;
 
-    const markup = priceNGN * (markupPercent / 100);
+    const customerPrice = priceNGN + markupAmount;
 
-    const customerPrice = priceNGN + markup;
-
-    product.cost = Math.ceil(customerPrice);
+    product.cost = Math.round(customerPrice / 100) * 100;
     product.currency = "NGN";
   }
 
