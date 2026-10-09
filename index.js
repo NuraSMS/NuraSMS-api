@@ -42,6 +42,16 @@ app.use("/api", require("./routes/wallet/walletRoute"));
 app.use("/api", require("./routes/wallet/transactionRoute"));
 app.use("/api", require("./routes/wallet/webhookRoute"));
 
+// Admin routes
+app.use("/api/admin/auth", require("./routes/admin/adminAuthRoute"));
+app.use("/api/admin/dashboard", require("./routes/admin/adminDashboardRoute"));
+app.use("/api/admin/users", require("./routes/admin/adminUserRoute"));
+app.use("/api/admin/wallets", require("./routes/admin/adminWalletRoute"));
+app.use("/api/admin/transactions", require("./routes/admin/adminTransactionRoute"));
+app.use("/api/admin/virtual-accounts", require("./routes/admin/adminVirtualAccountRoute"));
+app.use("/api/admin/fivesim", require("./routes/admin/adminFivesimRoute"));
+app.use("/api/admin/settings", require("./routes/admin/adminSettingsRoute"));
+
 
 // Test route
 app.get("/", (req, res) => {

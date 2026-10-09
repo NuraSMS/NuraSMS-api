@@ -1,4 +1,5 @@
 const client = require("../config/fivesim");
+const getSettings = require("./admin/getSettings");
 require("dotenv").config();
 
 // admin - change later to only allow admin users to access this service
@@ -14,18 +15,16 @@ async function getCountries() {
   return response.data;
 }
 
-async function getProducts(country, operator = process.env.FIVESIM_OPERATOR || "any") {
+async function getProducts(country, operator) {
+  const settings = await getSettings();
+  const resolvedOperator = operator || settings.fivesimOperator;
+
   const response = await client.get(
-    `/guest/products/${country}/${operator}`
+    `/guest/products/${country}/${resolvedOperator}`
   );
 
-  const exchangeRate = Number(
-    process.env.NURASMS_USD_NGN_RATE
-  );
-
-  const markupAmount = Number(
-    process.env.NURASMS_MARKUP_AMOUNT || 1100
-  );
+  const exchangeRate = settings.usdNgnRate;
+  const markupAmount = settings.markupAmount;
 
   if (!exchangeRate || exchangeRate <= 0) {
     throw new Error("Invalid USD to NGN exchange rate");
@@ -47,25 +46,21 @@ async function getProducts(country, operator = process.env.FIVESIM_OPERATOR || "
   return products;
 }
 
-async function buyActivationNumber(
-  country,
-  product,
-  operator = process.env.FIVESIM_OPERATOR || "any"
-) {
+async function buyActivationNumber(country, product, operator) {
+  const resolvedOperator = operator || (await getSettings()).fivesimOperator;
+
   const response = await client.get(
-    `/user/buy/activation/${country}/${operator}/${product}`
+    `/user/buy/activation/${country}/${resolvedOperator}/${product}`
   );
 
   return response.data;
 }
 
-async function buyHostingNumber(
-  country,
-  product,
-  operator = process.env.FIVESIM_OPERATOR || "any"
-) {
+async function buyHostingNumber(country, product, operator) {
+  const resolvedOperator = operator || (await getSettings()).fivesimOperator;
+
   const response = await client.get(
-    `/user/buy/hosting/${country}/${operator}/${product}`
+    `/user/buy/hosting/${country}/${resolvedOperator}/${product}`
   );
 
   return response.data;

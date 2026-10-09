@@ -44,7 +44,7 @@ const getCountries = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const { country } = req.params;
-    const { operator = process.env.FIVESIM_OPERATOR || "any" } = req.query;
+    const { operator } = req.query;
 
     if (!country) {
       return res.status(400).json({
@@ -74,11 +74,7 @@ const getProducts = async (req, res) => {
 
 const buyActivationNumber = async (req, res) => {
   try {
-    const {
-      country,
-      product,
-      operator = process.env.FIVESIM_OPERATOR || "any",
-    } = req.body;
+    const { country, product, operator } = req.body;
 
     if (!country || !product) {
       return res.status(400).json({
@@ -206,11 +202,7 @@ const buyActivationNumber = async (req, res) => {
 
 const buyHostingNumber = async (req, res) => {
   try {
-    const {
-      country,
-      product,
-      operator = process.env.FIVESIM_OPERATOR || "any",
-    } = req.body;
+    const { country, product, operator } = req.body;
 
     if (!country || !product) {
       return res.status(400).json({

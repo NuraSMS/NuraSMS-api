@@ -9,6 +9,8 @@ const userSchema = new Schema(
     password: { type: String, required: true },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
+    isSuspended: { type: Boolean, default: false },
+    suspendedReason: { type: String, default: null },
     resetPasswordToken: {
       type: String,
       default: null,

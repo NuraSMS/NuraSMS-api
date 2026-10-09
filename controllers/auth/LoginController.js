@@ -35,6 +35,12 @@ const login = async (req, res) => {
       });
     }
 
+    if (user.isSuspended) {
+      return res.status(403).json({
+        message: "This account has been suspended",
+      });
+    }
+
     const accessToken = jwt.sign(
       {
         id: user._id,
