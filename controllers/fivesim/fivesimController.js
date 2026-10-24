@@ -72,6 +72,33 @@ const getProducts = async (req, res) => {
   }
 };
 
+const getPrices = async (req, res) => {
+  try {
+    const { country, product } = req.query;
+
+    if (!country && !product) {
+      return res.status(400).json({
+        message: "Provide at least a country or a product to look up prices",
+      });
+    }
+
+    const prices = await fivesimService.getPrices(country, product);
+
+    return res.status(200).json({
+      prices,
+    });
+  } catch (error) {
+    console.error(
+      "Get prices error:",
+      error.response?.data || error.message
+    );
+
+    return res.status(500).json({
+      message: "Unable to retrieve prices",
+    });
+  }
+};
+
 const buyActivationNumber = async (req, res) => {
   try {
     const { country, product, operator } = req.body;
@@ -432,6 +459,7 @@ module.exports = {
   getUserProfile,
   getCountries,
   getProducts,
+  getPrices,
   buyActivationNumber,
   buyHostingNumber,
   checkOrder,

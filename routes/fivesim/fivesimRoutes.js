@@ -7,6 +7,7 @@ const authToken = require("../../middleware/auth");
 const {
   getCountries,
   getProducts,
+  getPrices,
   buyActivationNumber,
   buyHostingNumber,
   checkOrder,
@@ -23,6 +24,8 @@ router.get("/profile", getUserProfile);
 router.get("/countries", getCountries);
 
 router.get("/products/:country", getProducts);
+
+router.get("/prices", getPrices);
 
 router.post("/buy/activation", authToken, buyActivationNumber);
 

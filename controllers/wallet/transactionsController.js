@@ -1,7 +1,7 @@
 const TransactionModel = require("../../models/Transactions");
 
 const getTransactions = async (req, res) => {
-  const user = req.user._id;
+  const user = req.user.id;
 
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;

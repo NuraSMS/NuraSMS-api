@@ -46,6 +46,39 @@ async function getProducts(country, operator) {
   return products;
 }
 
+async function getPrices(country, product) {
+  const params = {};
+  if (country) params.country = country;
+  if (product) params.product = product;
+
+  const response = await client.get("/guest/prices", { params });
+
+  const settings = await getSettings();
+  const exchangeRate = settings.usdNgnRate;
+  const markupAmount = settings.markupAmount;
+
+  if (!exchangeRate || exchangeRate <= 0) {
+    throw new Error("Invalid USD to NGN exchange rate");
+  }
+
+  const data = response.data;
+
+  for (const productBlock of Object.values(data)) {
+    for (const operators of Object.values(productBlock)) {
+      for (const operatorData of Object.values(operators)) {
+        const priceUSD = Number(operatorData.cost);
+        const priceNGN = priceUSD * exchangeRate;
+        const customerPrice = priceNGN + markupAmount;
+
+        operatorData.cost = Math.round(customerPrice / 100) * 100;
+        operatorData.currency = "NGN";
+      }
+    }
+  }
+
+  return data;
+}
+
 async function buyActivationNumber(country, product, operator) {
   const resolvedOperator = operator || (await getSettings()).fivesimOperator;
 
@@ -124,6 +157,7 @@ module.exports = {
   getUserProfile,
   getCountries,
   getProducts,
+  getPrices,
   buyActivationNumber,
   buyHostingNumber,
   checkOrder,
