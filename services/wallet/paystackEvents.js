@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const VirtualAccountModel = require("../../models/VirtualAccounts");
 const TransactionModel = require("../../models/Transactions");
-const UserModel = require("../../models/User"); // Change this path/name if needed
+const UserModel = require("../../models/User"); 
 const creditWallet = require("./creditWallet");
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;

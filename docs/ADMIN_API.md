@@ -245,14 +245,44 @@ Platform's 5sim account profile.
 
 ### `GET /api/admin/fivesim/orders` — 🔒 admin
 Orders aren't stored as their own collection — this reconstructs the list from the debit transactions created when
-a user buys an activation number.
-**Query params:** `page`, `limit`, `user` (user ID), `country`, `product`.
-**Response `200`:** paginated list of transactions (each has `meta.orderId`, `meta.country`, `meta.product`,
-`meta.operator`), `user` populated.
+a user buys an activation number, and enriches each one **live** with 5sim's current status and OTP.
+**Query params:** `page`, `limit`, `user` (user ID), `country`, `product`, `search` (matches customer
+name/username/email, applied after fetching the page). `country` and `product` are the same lowercase 5sim slugs
+used everywhere else in this API (e.g. `country=nigeria`, `product=whatsapp`) — the same values returned by the
+public `GET /api/countries` and `GET /api/prices` endpoints, not display names.
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "orderId": "1135541596",
+      "transactionId": "...",
+      "reference": "5SIM-ACT-...",
+      "customer": { "id": "...", "name": "Biggest Dee", "username": "biggestdee", "email": "..." },
+      "service": "whatsapp",
+      "country": "canada",
+      "operator": "virtual8",
+      "phone": "+18738841141",
+      "amount": 1800,
+      "purchasedAt": "2026-11-10T19:10:46.487Z",
+      "expiresAt": "2026-11-10T19:30:47.294Z",
+      "status": "FINISHED",
+      "otp": "895506",
+      "sms": [ { "sender": "...", "text": "...", "code": "895506", "date": "..." } ]
+    }
+  ],
+  "pagination": { "page": 1, "limit": 20, "total": 533, "totalPages": 27, "hasNextPage": true, "hasPrevPage": false }
+}
+```
+`customer` is `null` for the rare order that has no matching local transaction. `status`/`otp`/`sms` come from a
+**live** call to 5sim per row — if that call fails for a given order (expired/unreachable), `status` falls back to
+whatever was last recorded at purchase time, and `otp` is `null`.
 
 ### `GET /api/admin/fivesim/orders/:orderId` — 🔒 admin
-Live status check against the provider.
-**Response `200`:** `{ "order": { ... 5sim order object ... } }`
+Same merged shape as one row above, for a single order — pass the 5sim order ID (not the Mongo transaction ID).
+**Response `200`:** `{ "order": { ...same shape as a row in the list above... } }`
+**Errors:** `404` if the order ID matches neither a local transaction nor a live 5sim order.
 
 ### `POST /api/admin/fivesim/orders/:orderId/finish` — 🔒 admin
 ### `POST /api/admin/fivesim/orders/:orderId/cancel` — 🔒 admin

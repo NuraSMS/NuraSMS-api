@@ -25,14 +25,56 @@ const getProviderProfile = async (req, res) => {
   }
 };
 
+// An order's live status/OTP only exist on 5sim's side — this merges that
+// with the customer + purchase details we hold locally on the transaction.
+const buildOrderDetails = async (transaction) => {
+  const orderId = transaction?.meta?.orderId;
+
+  let liveOrder = null;
+  if (orderId) {
+    try {
+      liveOrder = await fivesimService.checkOrder(orderId);
+    } catch (error) {
+      liveOrder = null;
+    }
+  }
+
+  const user = transaction?.user;
+
+  return {
+    orderId: orderId || (liveOrder ? String(liveOrder.id) : null),
+    transactionId: transaction?._id || null,
+    reference: transaction?.reference || null,
+    customer: user
+      ? {
+          id: user._id,
+          name: `${user.firstName} ${user.lastName}`,
+          username: user.username,
+          email: user.email,
+        }
+      : null,
+    service: transaction?.meta?.product || liveOrder?.product || null,
+    country: transaction?.meta?.country || liveOrder?.country || null,
+    operator: transaction?.meta?.operator || liveOrder?.operator || null,
+    phone: liveOrder?.phone || null,
+    amount: transaction?.amount ?? null,
+    purchasedAt: transaction?.createdAt || liveOrder?.created_at || null,
+    expiresAt: liveOrder?.expires || null,
+    status: liveOrder?.status || transaction?.meta?.orderStatus || "unknown",
+    otp: liveOrder?.sms?.[0]?.code || null,
+    sms: liveOrder?.sms || [],
+  };
+};
+
 // Orders aren't a separate collection — they're reconstructed from the
-// debit transactions created when a user buys a number.
+// debit transactions created when a user buys a number, enriched live
+// with 5sim's current status/OTP for each one.
 const getOrders = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    const { user, country, product } = req.query;
+    const { user, country, product, search } = req.query;
 
     const filter = {
       type: "debit",
@@ -43,14 +85,24 @@ const getOrders = async (req, res) => {
     if (country) filter["meta.country"] = country;
     if (product) filter["meta.product"] = product;
 
-    const [orders, total] = await Promise.all([
-      TransactionModel.find(filter)
-        .populate("user", "username email")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      TransactionModel.countDocuments(filter),
-    ]);
+    let transactions = await TransactionModel.find(filter)
+      .populate("user", "username email firstName lastName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await TransactionModel.countDocuments(filter);
+
+    let orders = await Promise.all(transactions.map(buildOrderDetails));
+
+    if (search) {
+      const needle = search.trim().toLowerCase();
+      orders = orders.filter((order) =>
+        order.customer?.name?.toLowerCase().includes(needle) ||
+        order.customer?.username?.toLowerCase().includes(needle) ||
+        order.customer?.email?.toLowerCase().includes(needle)
+      );
+    }
 
     return res.status(200).json({
       data: orders,
@@ -74,9 +126,23 @@ const getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    const order = await fivesimService.checkOrder(orderId);
+    const transaction = await TransactionModel.findOne({
+      type: "debit",
+      "meta.service": "5sim_activation",
+      "meta.orderId": String(orderId),
+    }).populate("user", "username email firstName lastName");
 
-    return res.status(200).json({ order });
+    const details = await buildOrderDetails(
+      transaction || { meta: { orderId: String(orderId) } },
+    );
+
+    if (!details.status || details.status === "unknown") {
+      if (!transaction) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+    }
+
+    return res.status(200).json({ order: details });
   } catch (error) {
     console.error("Admin get order error:", error.response?.data || error.message);
 
